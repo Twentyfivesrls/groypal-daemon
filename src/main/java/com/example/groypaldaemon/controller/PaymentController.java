@@ -1,5 +1,8 @@
 package com.example.groypaldaemon.controller;
 
+import com.example.groypaldaemon.clients.PaypalClient;
+import com.example.groypaldaemon.clients.clientModels.PaypalTokenRequest;
+import com.example.groypaldaemon.clients.clientModels.PaypalTokenResponse;
 import com.example.groypaldaemon.configuration.ProducerPool;
 import com.example.groypaldaemon.model.*;
 import com.example.groypaldaemon.service.PaymentService;
@@ -27,6 +30,9 @@ public class PaymentController {
 
     @Autowired
     private AuthenticationService authenticationService;
+
+    @Autowired
+    private PaypalClient paypalClient;
 
     @PostMapping()
     public ResponseEntity<Map<String,Object>> pay(@RequestBody SimpleOrderRequest simpleOrderRequest, @RequestHeader("Payment-App-Id") String paymentAppId){
@@ -69,7 +75,6 @@ public class PaymentController {
         Gson gson = new Gson();
         String result = gson.toJson(message);
         this.sender.send(result, 1, "twentyfive_internal_user_subscriptions");
-
     }
 
     private void sendPreorder(String paypalId, List<SimpleItem> items, String paymentAppId){
@@ -79,4 +84,16 @@ public class PaymentController {
         // "twentyfive_internal_preorders"
         this.sender.send(result, 1, paymentAppId);
     }
+
+    @GetMapping("/testauth")
+    public ResponseEntity<PaypalTokenResponse> authenticate(){
+        return paypalClient.getToken(new PaypalTokenRequest("client_credentials"));
+    }
+
+    @GetMapping("/testarray")
+    public ResponseEntity arrayTest(@RequestParam("arrayVal") String arrayVal, @RequestParam("section") String section){
+        System.out.println(arrayVal);
+        return ResponseEntity.ok(arrayVal);
+    }
+
 }

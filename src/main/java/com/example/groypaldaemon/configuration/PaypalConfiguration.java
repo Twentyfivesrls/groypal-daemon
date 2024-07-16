@@ -2,6 +2,7 @@ package com.example.groypaldaemon.configuration;
 
 import com.paypal.core.PayPalEnvironment;
 import com.paypal.core.PayPalHttpClient;
+import feign.auth.BasicAuthRequestInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +38,16 @@ public class PaypalConfiguration {
             );
         }
     }
+
+    @Bean
+    public PaypalData paypalData(){
+        if(paypalEnvironmentLive) {
+            return new PaypalData(clientId, clientSecret);
+        } else {
+            return new PaypalData(clientIdSandbox, clientSecretSandbox);
+        }
+    }
+
 
 
 }

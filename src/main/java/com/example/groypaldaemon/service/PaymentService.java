@@ -76,5 +76,9 @@ public class PaymentService {
         return response.result();
     }
 
+    public Object createSubscription() throws IOException {
+        return null;
+    }
+
 
 }
