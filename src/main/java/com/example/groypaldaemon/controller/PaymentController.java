@@ -7,11 +7,16 @@ import com.example.groypaldaemon.configuration.ProducerPool;
 import com.example.groypaldaemon.model.*;
 import com.example.groypaldaemon.service.PaymentService;
 import com.google.gson.Gson;
+import com.paypal.core.PayPalEnvironment;
+import com.paypal.core.PayPalHttpClient;
 import com.paypal.orders.Order;
 import com.twentyfive.authorizationflow.services.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import twentyfive.twentyfiveadapter.dto.groypalDaemon.PaypalCredentials;
+import twentyfive.twentyfiveadapter.dto.groypalDaemon.SimpleItem;
+import twentyfive.twentyfiveadapter.dto.groypalDaemon.SimpleOrderRequest;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,6 +39,8 @@ public class PaymentController {
     @Autowired
     private PaypalClient paypalClient;
 
+    private PayPalHttpClient payPalHttpClient;
+
     @PostMapping()
     public ResponseEntity<Map<String,Object>> pay(@RequestBody SimpleOrderRequest simpleOrderRequest, @RequestHeader("Payment-App-Id") String paymentAppId){
         ResponseWrapper result = paymentService.createOrder(simpleOrderRequest);
@@ -42,6 +49,35 @@ public class PaymentController {
         String res = gson.toJson(result);
         Map<String,Object> jsonRes = gson.fromJson(res, Map.class);
         return ResponseEntity.status(result.getStatusCode()).body(jsonRes);
+    }
+    @PostMapping("/outside")
+    public ResponseEntity<Map<String,Object>> payOutside(@RequestBody SimpleOrderRequest simpleOrderRequest,@RequestHeader("Payment-App-Id") String paymentAppId){
+        if(simpleOrderRequest.getPaypalCredentials().isDev()){
+            payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Sandbox(simpleOrderRequest.getPaypalCredentials().getClientId(), simpleOrderRequest.getPaypalCredentials().getClientSecret()));
+        } else {
+            payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Live(simpleOrderRequest.getPaypalCredentials().getClientId(), simpleOrderRequest.getPaypalCredentials().getClientSecret()));
+        }
+        ResponseWrapper result = paymentService.createOrderOutside(simpleOrderRequest,payPalHttpClient);
+        sendPreorder(result.getContent().id(),simpleOrderRequest.getItems(), paymentAppId);
+        Gson gson = new Gson();
+        String res = gson.toJson(result);
+        Map<String,Object> jsonRes = gson.fromJson(res, Map.class);
+        return ResponseEntity.status(result.getStatusCode()).body(jsonRes);
+    }
+    @PostMapping("capture-outside/{orderId}")
+    public ResponseEntity<Map<String,Object>> captureRequestOutside(@PathVariable String orderId, @RequestBody PaypalCredentials paypalCredentials) throws IOException {
+        if(paypalCredentials.isDev()){
+            payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Sandbox(paypalCredentials.getClientId(), paypalCredentials.getClientSecret()));
+        } else {
+            payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Live(paypalCredentials.getClientId(), paypalCredentials.getClientSecret()));
+        }
+        ResponseWrapper result = paymentService.capturePaymentOutside(orderId, payPalHttpClient);
+        Gson gson = new Gson();
+        String res = gson.toJson(result);
+        Map<String,Object> jsonRes = gson.fromJson(res, Map.class);
+        // Mandare sulla coda i dati di pagamento
+        sendSubscriptionOnKafka(result);
+        return ResponseEntity.ok(jsonRes);
     }
 
     @GetMapping("authorize/{orderId}")

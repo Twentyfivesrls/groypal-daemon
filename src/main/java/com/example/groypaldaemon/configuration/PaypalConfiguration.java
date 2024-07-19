@@ -2,10 +2,12 @@ package com.example.groypaldaemon.configuration;
 
 import com.paypal.core.PayPalEnvironment;
 import com.paypal.core.PayPalHttpClient;
-import feign.auth.BasicAuthRequestInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Scope;
+import org.springframework.web.context.WebApplicationContext;
 
 @Configuration
 public class PaypalConfiguration {
@@ -16,7 +18,6 @@ public class PaypalConfiguration {
     @Value("${paypal.sandbox.clientSecret}")
     private String clientSecretSandbox;
 
-
     @Value("${paypal.live.clientId}")
     private String clientId;
 
@@ -26,28 +27,28 @@ public class PaypalConfiguration {
     @Value("${paypal.environment.live}")
     private boolean paypalEnvironmentLive;
 
+    private PayPalHttpClient payPalHttpClient;
+
     @Bean
+    @Scope(WebApplicationContext.SCOPE_APPLICATION)
+    @Primary
     public PayPalHttpClient payPalHttpClient() {
-        if(paypalEnvironmentLive) {
-            return new PayPalHttpClient(
-                    new PayPalEnvironment.Live(clientId, clientSecret)
-            );
-        } else {
-            return new PayPalHttpClient(
-                    new PayPalEnvironment.Sandbox(clientIdSandbox, clientSecretSandbox)
-            );
+        if (payPalHttpClient == null) {
+            if (paypalEnvironmentLive) {
+                payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Live(clientId, clientSecret));
+            } else {
+                payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Sandbox(clientIdSandbox, clientSecretSandbox));
+            }
         }
+        return payPalHttpClient;
     }
 
     @Bean
     public PaypalData paypalData(){
-        if(paypalEnvironmentLive) {
+        if (paypalEnvironmentLive) {
             return new PaypalData(clientId, clientSecret);
         } else {
             return new PaypalData(clientIdSandbox, clientSecretSandbox);
         }
     }
-
-
-
 }

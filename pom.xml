@@ -55,6 +55,11 @@
             <version>3.1.2</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.twentyfive</groupId>
+            <artifactId>twentyfive-adapters</artifactId>
+            <version>0.0.175</version>
+        </dependency>
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
