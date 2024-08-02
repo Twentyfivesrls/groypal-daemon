@@ -4,6 +4,10 @@ import com.example.groypaldaemon.model.ResponseWrapper;
 import com.paypal.core.PayPalHttpClient;
 import com.paypal.http.HttpResponse;
 import com.paypal.orders.*;
+import com.paypal.payments.*;
+import com.paypal.payments.Capture;
+import com.paypal.payments.Money;
+import com.paypal.payments.Refund;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -121,5 +125,42 @@ public class PaymentService {
 
     public Object createSubscription() throws IOException {
         return null;
+    }
+
+    public ResponseWrapper refundPayment(String captureId) {
+        ResponseWrapper responseWrapper = new ResponseWrapper();
+        try {
+            Capture capture = getCaptureDetails(captureId);
+            Money amount = capture.amount();
+
+            CapturesRefundRequest request = new CapturesRefundRequest(captureId);
+            RefundRequest refundRequest = new RefundRequest();
+            refundRequest.amount(amount);
+            request.requestBody(refundRequest);
+            HttpResponse<Refund> response = payPalHttpClient.execute(request);
+            responseWrapper.setStatusCode(response.statusCode());
+            if (response.statusCode() < 400) {
+                responseWrapper.setMessage("OK");
+                responseWrapper.setContentRefund(response.result());
+            } else if (response.statusCode() >= 400 && response.statusCode() < 500) {
+                responseWrapper.setMessage("KO");
+                responseWrapper.setContentRefund(null);
+            } else {
+                responseWrapper.setMessage("SERVER ERROR");
+                responseWrapper.setContentRefund(null);
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+            responseWrapper.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseWrapper.setMessage(e.getMessage());
+            responseWrapper.setContent(null);
+        }
+        return responseWrapper;
+    }
+
+    public Capture getCaptureDetails(String captureId) throws IOException {
+        CapturesGetRequest request = new CapturesGetRequest(captureId);
+        HttpResponse<Capture> response = payPalHttpClient.execute(request);
+        return response.result();
     }
 }

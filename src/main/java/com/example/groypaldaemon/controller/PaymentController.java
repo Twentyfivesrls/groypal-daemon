@@ -99,7 +99,14 @@ public class PaymentController {
         sendSubscriptionOnKafka(result);
         return ResponseEntity.ok(jsonRes);
     }
-
+    @PostMapping("/refund/{captureId}")
+    public ResponseEntity<Map<String,Object>> refundPayment(@PathVariable String captureId) throws IOException{
+        ResponseWrapper result = paymentService.refundPayment(captureId);
+        Gson gson = new Gson();
+        String res = gson.toJson(result);
+        Map<String,Object> jsonRes = gson.fromJson(res, Map.class);
+        return ResponseEntity.ok(jsonRes);
+    }
     private void sendSubscriptionOnKafka(ResponseWrapper response) throws IOException {
         String userId = authenticationService.getId();
         String paymentId = response.getContent().id();
