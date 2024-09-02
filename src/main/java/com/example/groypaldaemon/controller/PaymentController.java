@@ -79,6 +79,19 @@ public class PaymentController {
         sendSubscriptionOnKafka(result);
         return ResponseEntity.ok(jsonRes);
     }
+    @PostMapping("/refund-outside/{captureId}")
+    public ResponseEntity<Map<String,Object>> refundPaymentOutside(@PathVariable String captureId,@RequestBody PaypalCredentials paypalCredentials) throws IOException{
+        if(paypalCredentials.isDev()){
+            payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Sandbox(paypalCredentials.getClientId(), paypalCredentials.getClientSecret()));
+        } else {
+            payPalHttpClient = new PayPalHttpClient(new PayPalEnvironment.Live(paypalCredentials.getClientId(), paypalCredentials.getClientSecret()));
+        }
+        ResponseWrapper result = paymentService.refundPaymentOutside(captureId,payPalHttpClient);
+        Gson gson = new Gson();
+        String res = gson.toJson(result);
+        Map<String,Object> jsonRes = gson.fromJson(res, Map.class);
+        return ResponseEntity.ok(jsonRes);
+    }
 
     @GetMapping("authorize/{orderId}")
     public ResponseEntity<Map<String,Object>> authorizeRequest(@PathVariable String orderId) throws IOException {

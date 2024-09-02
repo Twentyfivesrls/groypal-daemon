@@ -127,7 +127,7 @@ public class PaymentService {
         return null;
     }
 
-    public ResponseWrapper refundPayment(String captureId) {
+    public ResponseWrapper refundPaymentOutside(String captureId,PayPalHttpClient payPalHttpClient) {
         ResponseWrapper responseWrapper = new ResponseWrapper();
         try {
             Capture capture = getCaptureDetails(captureId);
@@ -138,6 +138,36 @@ public class PaymentService {
             refundRequest.amount(amount);
             request.requestBody(refundRequest);
             HttpResponse<Refund> response = payPalHttpClient.execute(request);
+            responseWrapper.setStatusCode(response.statusCode());
+            if (response.statusCode() < 400) {
+                responseWrapper.setMessage("OK");
+                responseWrapper.setContentRefund(response.result());
+            } else if (response.statusCode() >= 400 && response.statusCode() < 500) {
+                responseWrapper.setMessage("KO");
+                responseWrapper.setContentRefund(null);
+            } else {
+                responseWrapper.setMessage("SERVER ERROR");
+                responseWrapper.setContentRefund(null);
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+            responseWrapper.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseWrapper.setMessage(e.getMessage());
+            responseWrapper.setContent(null);
+        }
+        return responseWrapper;
+    }
+    public ResponseWrapper refundPayment(String captureId) {
+        ResponseWrapper responseWrapper = new ResponseWrapper();
+        try {
+            Capture capture = getCaptureDetails(captureId);
+            Money amount = capture.amount();
+
+            CapturesRefundRequest request = new CapturesRefundRequest(captureId);
+            RefundRequest refundRequest = new RefundRequest();
+            refundRequest.amount(amount);
+            request.requestBody(refundRequest);
+            HttpResponse<Refund> response = this.payPalHttpClient.execute(request);
             responseWrapper.setStatusCode(response.statusCode());
             if (response.statusCode() < 400) {
                 responseWrapper.setMessage("OK");
